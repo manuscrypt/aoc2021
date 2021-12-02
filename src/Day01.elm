@@ -54,14 +54,19 @@ count : Int -> List Window -> Int
 count acc windows =
     case windows of
         x :: y :: z ->
-            if sum y > sum x then
-                count (acc + 1) (y :: z)
-
-            else
-                count acc (y :: z)
+            count (addOneIfSumGreater y x acc) (y :: z)
 
         _ ->
             acc
+
+
+addOneIfSumGreater : Window -> Window -> Int -> Int
+addOneIfSumGreater a b acc =
+    if sum a > sum b then
+        acc + 1
+
+    else
+        acc
 
 
 sum : Window -> Int
