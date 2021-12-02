@@ -2,8 +2,7 @@ module Day01 exposing (program)
 
 import List.Extra as List
 import Posix.IO as IO exposing (IO, Process)
-import Posix.IO.File as File
-import Posix.IO.Process as Proc
+import Utils exposing (..)
 
 
 type Window
@@ -15,18 +14,19 @@ program : Process -> IO ()
 program _ =
     let
         input =
-            readAllLines "C:/src/aoc2021/data/d01.txt"
+            getInput "d01" "input"
+
+        sample =
+            getInput "d01" "sample"
     in
     IO.do
         (IO.combine
             [ sample
-                |> toInputA
-                |> count 0
-                |> output "Sample Part A: "
+                |> IO.map (toInputA >> count 0)
+                |> IO.andThen (output "Sample Part A: ")
             , sample
-                |> toInputB
-                |> count 0
-                |> output "Sample Part B: "
+                |> IO.map (toInputB >> count 0)
+                |> IO.andThen (output "Sample Part B: ")
             , input
                 |> IO.map (toInputA >> count 0)
                 |> IO.andThen (output "Part A: ")
@@ -77,40 +77,3 @@ sum win =
 
         Triplet ( a, b, c ) ->
             a + b + c
-
-
-sample : List String
-sample =
-    [ "199"
-    , "200"
-    , "208"
-    , "210"
-    , "200"
-    , "207"
-    , "240"
-    , "269"
-    , "260"
-    , "263"
-    ]
-
-
-output : String -> Int -> IO ()
-output prefix num =
-    IO.do (Proc.print (prefix ++ String.fromInt num))
-        return
-
-
-readAllLines : String -> IO (List String)
-readAllLines filename =
-    IO.do
-        (File.contentsOf filename
-            |> IO.exitOnError identity
-        )
-        (String.lines
-            >> IO.return
-        )
-
-
-return : a -> IO ()
-return _ =
-    IO.return ()
