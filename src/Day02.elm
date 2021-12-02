@@ -85,24 +85,15 @@ toInput =
 
 parseMove : String -> Maybe Move
 parseMove str =
-    case String.split " " str of
-        [ move, i ] ->
-            String.toInt i
-                |> Maybe.andThen
-                    (\amt ->
-                        case move of
-                            "forward" ->
-                                Forward amt |> Just
+    case String.words str of
+        [ "forward", p ] ->
+            Maybe.map Forward (String.toInt p)
 
-                            "up" ->
-                                Up amt |> Just
+        [ "down", p ] ->
+            Maybe.map Down (String.toInt p)
 
-                            "down" ->
-                                Down amt |> Just
-
-                            _ ->
-                                Nothing
-                    )
+        [ "up", p ] ->
+            Maybe.map Up (String.toInt p)
 
         _ ->
             Nothing
