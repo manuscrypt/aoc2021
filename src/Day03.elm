@@ -38,11 +38,6 @@ program _ =
         return
 
 
-count : String -> List String -> Int
-count c =
-    List.filter ((==) c) >> List.length
-
-
 solveA : List String -> Int
 solveA strings =
     let
@@ -106,6 +101,11 @@ stepB most pos remaining =
                     stepB most (pos + 1) filtered
 
 
+count : String -> List String -> Int
+count c =
+    List.filter ((==) c) >> List.length
+
+
 getSignificantBitInt : Bool -> ( Int, Int ) -> Int
 getSignificantBitInt most ( zeroes, ones ) =
     if most then
@@ -149,12 +149,6 @@ recombine strings =
         |> List.concatMap (List.indexedMap Tuple.pair)
         |> Dict.groupBy Tuple.first
         |> Dict.map (\_ v -> List.map Tuple.second v)
-
-
-toDecimals : List String -> List Int
-toDecimals strings =
-    strings
-        |> List.map (String.split "" >> List.filterMap String.toInt >> Binary.fromIntegers >> Binary.toDecimal)
 
 
 toStringArrays : List String -> List (Array String)
