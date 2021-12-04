@@ -34,6 +34,12 @@ output prefix num =
         return
 
 
+outputStr : String -> String -> IO ()
+outputStr prefix str =
+    IO.do (Proc.print (prefix ++ str))
+        return
+
+
 return : a -> IO ()
 return _ =
     IO.return ()

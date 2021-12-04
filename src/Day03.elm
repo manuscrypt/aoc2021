@@ -1,8 +1,7 @@
 module Day03 exposing (program)
 
 import Array exposing (Array)
-import Binary exposing (fromIntegers, toDecimal)
-import Bit
+import Binary
 import Dict exposing (Dict)
 import Dict.Extra as Dict
 import List.Extra as List
@@ -80,7 +79,7 @@ stepB most pos remaining =
                 |> Binary.fromIntegers
                 |> Binary.toDecimal
 
-        list ->
+        _ ->
             let
                 recombined =
                     recombine (List.map (Array.toList >> String.join "") remaining)
