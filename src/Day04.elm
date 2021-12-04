@@ -79,7 +79,7 @@ winnerBy fn model =
             |> Maybe.andThen
                 (\idx ->
                     stepped.boards
-                        |> List.filter (\b -> b.winnerIdx == Just idx && sumUnMarked b > 0)
+                        |> List.filter (\b -> b.winnerIdx == Just idx)
                         |> List.head
                 )
     of
