@@ -19,11 +19,6 @@ type alias Line =
     }
 
 
-type alias Model =
-    { lines : List Line
-    }
-
-
 program : Process -> IO ()
 program _ =
     let
@@ -36,59 +31,49 @@ program _ =
     IO.do
         (IO.combine
             [ sample
-                |> IO.map (parse >> solveA)
+                |> IO.map (parse >> List.filter isStraight >> solve)
                 |> IO.andThen (output "Sample Part A: ")
             , sample
-                |> IO.map (parse >> solveB)
+                |> IO.map (parse >> solve)
                 |> IO.andThen (output "Sample Part B: ")
             , input
-                |> IO.map (parse >> solveA)
+                |> IO.map (parse >> List.filter isStraight >> solve)
                 |> IO.andThen (output "Part A: ")
             , input
-                |> IO.map (parse >> solveB)
+                |> IO.map (parse >> solve)
                 |> IO.andThen (output "Part B: ")
             ]
         )
         return
 
 
-solveA : Model -> Int
-solveA model =
-    straightLines model
-        |> solveB
-
-
-solveB : Model -> Int
-solveB model =
-    model.lines
+solve : List Line -> Int
+solve lines =
+    lines
         |> List.concatMap points
         |> groupBy (\p -> ( p.x, p.y ))
-        |> Dict.filter (\k v -> List.length v > 1)
+        |> Dict.filter (\_ v -> List.length v > 1)
         |> Dict.toList
         |> List.length
 
 
 points : Line -> List Pos
 points line =
-    pointStepper line.from line []
+    pointStepper line.from [] line
 
 
-pointStepper : Pos -> Line -> List Pos -> List Pos
-pointStepper ({ x, y } as cur) line positions =
-    let
-        lineSlope =
-            slope line |> fromTuple
-    in
+pointStepper : Pos -> List Pos -> Line -> List Pos
+pointStepper cur positions line =
     if cur == line.to then
         cur :: positions
 
     else
-        pointStepper { cur | x = x + lineSlope.x, y = y + lineSlope.y } line (cur :: positions)
+        pointStepper (add cur (slope line)) (cur :: positions) line
 
 
-straightLines : Model -> Model
-straightLines model =
-    { model | lines = List.filter isStraight model.lines }
+add : Pos -> Pos -> Pos
+add p1 p2 =
+    { x = p1.x + p2.x, y = p1.y + p2.y }
 
 
 isStraight : Line -> Bool
@@ -96,18 +81,26 @@ isStraight { from, to } =
     from.x == to.x || from.y == to.y
 
 
-slope : Line -> ( Int, Int )
+slope : Line -> Pos
 slope { from, to } =
-    ( (to.x - from.x) // abs (to.x - from.x), (to.y - from.y) // abs (to.y - from.y) )
+    ( (to.x - from.x) // abs (to.x - from.x)
+    , (to.y - from.y) // abs (to.y - from.y)
+    )
+        |> fromTuple
+
+
+fromTuple : ( Int, Int ) -> Pos
+fromTuple ( x, y ) =
+    { x = x, y = y }
 
 
 
 ---parsing
 
 
-parse : List String -> Model
+parse : List String -> List Line
 parse input =
-    { lines = input |> List.filterMap parseLine }
+    input |> List.filterMap parseLine
 
 
 parseLine : String -> Maybe Line
@@ -118,16 +111,6 @@ parseLine s =
 
         _ ->
             Nothing
-
-
-toTuple : Pos -> ( Int, Int )
-toTuple { x, y } =
-    ( x, y )
-
-
-fromTuple : ( Int, Int ) -> Pos
-fromTuple ( x, y ) =
-    { x = x, y = y }
 
 
 parsePoint : String -> Maybe Pos
