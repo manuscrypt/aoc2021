@@ -41,7 +41,9 @@ program _ =
 
 solve : Int -> Fishes -> Int
 solve days fishes =
-    step days fishes |> Dict.values |> List.sum
+    step days fishes
+        |> Dict.values
+        |> List.sum
 
 
 step : Int -> Fishes -> Fishes
@@ -52,30 +54,25 @@ step daysLeft fishes =
     else
         let
             zeroes =
-                Dict.get 0 fishes |> Maybe.withDefault 0
+                fishes
+                    |> Dict.get 0
+                    |> Maybe.withDefault 0
 
             newFishes =
-                Dict.mapKeys (\day -> day - 1) fishes
+                fishes
+                    |> Dict.mapKeys (\day -> day - 1)
                     |> Dict.remove -1
 
             recycled =
                 if zeroes > 0 then
-                    Dict.update 6
-                        (\mbv -> Just (Maybe.withDefault 0 mbv + zeroes))
-                        newFishes
-
-                else
                     newFishes
-
-            finalFishes =
-                if zeroes > 0 then
-                    recycled
+                        |> Dict.update 6 (\mbv -> Just (Maybe.withDefault 0 mbv + zeroes))
                         |> Dict.insert 8 zeroes
 
                 else
-                    recycled
+                    newFishes
         in
-        step (daysLeft - 1) finalFishes
+        step (daysLeft - 1) recycled
 
 
 
