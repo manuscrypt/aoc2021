@@ -1,6 +1,5 @@
 module Day08 exposing (..)
 
-import Array exposing (fromList)
 import List.Extra as List
 import Posix.IO as IO exposing (IO, Process)
 import Set
@@ -22,7 +21,7 @@ type alias Entry =
 program : Process -> IO ()
 program _ =
     let
-        first =
+        _ =
             [ "acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab | cdfeb fcadb cdfeb cdbaf" ]
                 |> parse
                 |> solveB
@@ -80,7 +79,7 @@ solveEntry entry =
                         filled
                             |> List.map
                                 (\p ->
-                                    case ( p.digit, countCommon pat4.str p.str ) of
+                                    case ( p.digit, countCommon pat4 p ) of
                                         ( Nothing, 4 ) ->
                                             { p | digit = Just 9 }
 
@@ -90,14 +89,14 @@ solveEntry entry =
                     )
                 |> Maybe.withDefault filled
 
-        withThree =
+        withThreeAndZero =
             getPatternForDigit 7 withNine
                 |> Maybe.map
                     (\pat7 ->
                         withNine
                             |> List.map
                                 (\p ->
-                                    case ( p.digit, countCommon pat7.str p.str, countDiff p.str pat7.str ) of
+                                    case ( p.digit, countCommon pat7 p, countDiff p pat7 ) of
                                         ( Nothing, 3, 2 ) ->
                                             { p | digit = Just 3 }
 
@@ -111,10 +110,10 @@ solveEntry entry =
                 |> Maybe.withDefault withNine
 
         withSix =
-            withThree
+            withThreeAndZero
                 |> List.map
                     (\p ->
-                        case ( p.digit, String.length p.str ) of
+                        case ( p.digit, len p ) of
                             ( Nothing, 6 ) ->
                                 { p | digit = Just 6 }
 
@@ -129,7 +128,7 @@ solveEntry entry =
                         withSix
                             |> List.map
                                 (\p ->
-                                    case ( p.digit, countCommon pat4.str p.str ) of
+                                    case ( p.digit, countCommon pat4 p ) of
                                         ( Nothing, 3 ) ->
                                             { p | digit = Just 5 }
 
@@ -161,15 +160,15 @@ translate filled empty =
         |> List.sum
 
 
-countCommon : String -> String -> Int
-countCommon s1 s2 =
-    Set.intersect (Set.fromList (String.split "" s1)) (Set.fromList (String.split "" s2))
+countCommon : Pattern -> Pattern -> Int
+countCommon p1 p2 =
+    Set.intersect (Set.fromList (String.split "" p1.str)) (Set.fromList (String.split "" p2.str))
         |> Set.size
 
 
-countDiff : String -> String -> Int
-countDiff s1 s2 =
-    Set.diff (Set.fromList (String.split "" s1)) (Set.fromList (String.split "" s2))
+countDiff : Pattern -> Pattern -> Int
+countDiff p1 p2 =
+    Set.diff (Set.fromList (String.split "" p1.str)) (Set.fromList (String.split "" p2.str))
         |> Set.size
 
 
@@ -195,12 +194,6 @@ fillKnown p =
 len : Pattern -> Int
 len pattern =
     String.length pattern.str
-
-
-getPatternWithLength : Int -> List Pattern -> List Pattern
-getPatternWithLength i patterns =
-    patterns
-        |> List.filter (\s -> String.length s.str == i)
 
 
 getPatternForDigit : Int -> List Pattern -> Maybe Pattern
