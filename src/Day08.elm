@@ -2,12 +2,12 @@ module Day08 exposing (..)
 
 import List.Extra as List
 import Posix.IO as IO exposing (IO, Process)
-import Set
+import Set exposing (Set)
 import Utils exposing (..)
 
 
 type alias Pattern =
-    { str : String
+    { str : Set String
     , digit : Maybe Int
     }
 
@@ -63,7 +63,9 @@ solveA entries =
 
 solveB : List Entry -> Int
 solveB entries =
-    entries |> List.map solveEntry |> List.sum
+    entries
+        |> List.map solveEntry
+        |> List.sum
 
 
 solveEntry : Entry -> Int
@@ -162,13 +164,13 @@ translate filled empty =
 
 countCommon : Pattern -> Pattern -> Int
 countCommon p1 p2 =
-    Set.intersect (Set.fromList (String.split "" p1.str)) (Set.fromList (String.split "" p2.str))
+    Set.intersect p1.str p2.str
         |> Set.size
 
 
 countDiff : Pattern -> Pattern -> Int
 countDiff p1 p2 =
-    Set.diff (Set.fromList (String.split "" p1.str)) (Set.fromList (String.split "" p2.str))
+    Set.diff p1.str p2.str
         |> Set.size
 
 
@@ -198,7 +200,7 @@ setDigit i p =
 
 len : Pattern -> Int
 len pattern =
-    String.length pattern.str
+    Set.size pattern.str
 
 
 getPatternForDigit : Int -> List Pattern -> Maybe Pattern
@@ -206,10 +208,10 @@ getPatternForDigit i patterns =
     patterns |> List.filter (\p -> p.digit == Just i) |> List.head
 
 
-getDigitForPattern : String -> List Pattern -> Maybe Int
-getDigitForPattern str filled =
+getDigitForPattern : Set String -> List Pattern -> Maybe Int
+getDigitForPattern pat filled =
     filled
-        |> List.filter (\p -> p.str == str)
+        |> List.filter (\p -> pat == p.str)
         |> List.head
         |> Maybe.andThen .digit
 
@@ -241,7 +243,6 @@ toPattern : String -> Pattern
 toPattern str =
     Pattern
         (String.split "" str
-            |> List.sort
-            |> String.join ""
+            |> Set.fromList
         )
         Nothing
