@@ -3,7 +3,6 @@ module Day07 exposing (..)
 import Array exposing (fromList)
 import List.Extra as List
 import Posix.IO as IO exposing (IO, Process)
-import String exposing (toInt)
 import Utils exposing (..)
 
 
