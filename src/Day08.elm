@@ -81,7 +81,7 @@ solveEntry entry =
                                 (\p ->
                                     case ( p.digit, countCommon pat4 p ) of
                                         ( Nothing, 4 ) ->
-                                            { p | digit = Just 9 }
+                                            setDigit 9 p
 
                                         _ ->
                                             p
@@ -98,10 +98,10 @@ solveEntry entry =
                                 (\p ->
                                     case ( p.digit, countCommon pat7 p, countDiff p pat7 ) of
                                         ( Nothing, 3, 2 ) ->
-                                            { p | digit = Just 3 }
+                                            setDigit 3 p
 
                                         ( Nothing, 3, 3 ) ->
-                                            { p | digit = Just 0 }
+                                            setDigit 0 p
 
                                         _ ->
                                             p
@@ -115,7 +115,7 @@ solveEntry entry =
                     (\p ->
                         case ( p.digit, len p ) of
                             ( Nothing, 6 ) ->
-                                { p | digit = Just 6 }
+                                setDigit 6 p
 
                             _ ->
                                 p
@@ -130,7 +130,7 @@ solveEntry entry =
                                 (\p ->
                                     case ( p.digit, countCommon pat4 p ) of
                                         ( Nothing, 3 ) ->
-                                            { p | digit = Just 5 }
+                                            setDigit 5 p
 
                                         _ ->
                                             p
@@ -143,7 +143,7 @@ solveEntry entry =
                 |> List.map
                     (\p ->
                         if p.digit == Nothing then
-                            { p | digit = Just 2 }
+                            setDigit 2 p
 
                         else
                             p
@@ -176,19 +176,24 @@ fillKnown : Pattern -> Pattern
 fillKnown p =
     case len p of
         2 ->
-            { p | digit = Just 1 }
+            setDigit 1 p
 
         3 ->
-            { p | digit = Just 7 }
+            setDigit 7 p
 
         4 ->
-            { p | digit = Just 4 }
+            setDigit 4 p
 
         7 ->
-            { p | digit = Just 8 }
+            setDigit 8 p
 
         _ ->
             p
+
+
+setDigit : Int -> Pattern -> Pattern
+setDigit i p =
+    { p | digit = Just i }
 
 
 len : Pattern -> Int
