@@ -74,7 +74,7 @@ findBasins cells foundSoFar remainingToCheck =
                     List.filter (\c -> not (List.any (\f -> f.pos == c.pos) foundSoFar)) cells
 
                 nextHighers =
-                    getSurroundingOneHigher x checkOnlyThese
+                    getSurroundingCellsWithHigher x checkOnlyThese
 
                 nextFound =
                     (foundSoFar ++ nextHighers) |> List.uniqueBy .pos
@@ -82,8 +82,8 @@ findBasins cells foundSoFar remainingToCheck =
             findBasins checkOnlyThese nextFound (y ++ nextHighers)
 
 
-getSurroundingOneHigher : Cell -> List Cell -> List Cell
-getSurroundingOneHigher lowPoint cells =
+getSurroundingCellsWithHigher : Cell -> List Cell -> List Cell
+getSurroundingCellsWithHigher lowPoint cells =
     getSurroundingCells lowPoint.pos cells
         |> List.filter (\c -> lowPoint.v < c.v)
 
