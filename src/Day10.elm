@@ -64,21 +64,21 @@ solveB input =
 
 inspectLine : List Char -> ( Stack Char, Int )
 inspectLine chars =
-    stepA chars ( Stack.initialise, 0 )
+    step chars ( Stack.initialise, 0 )
 
 
-stepA : List Char -> ( Stack Char, Int ) -> ( Stack Char, Int )
-stepA chars ( stack, prevScore ) =
+step : List Char -> ( Stack Char, Int ) -> ( Stack Char, Int )
+step chars ( stack, prevScore ) =
     case chars of
         [] ->
             ( stack, prevScore )
 
         c :: rest ->
             if List.member c openers then
-                stepA rest ( Stack.push c stack, prevScore )
+                step rest ( Stack.push c stack, prevScore )
 
             else if Stack.top stack == Just (openerOf c) then
-                stepA rest ( Stack.pop stack |> Tuple.second, prevScore )
+                step rest ( Stack.pop stack |> Tuple.second, prevScore )
 
             else
                 ( stack, scoreA c )
