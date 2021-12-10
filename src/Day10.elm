@@ -44,22 +44,22 @@ solveA input =
 
 solveB : List (List Char) -> Int
 solveB input =
-    let
-        scores =
-            input
-                |> List.map inspectLine
-                |> List.filter (\x -> Tuple.second x == 0)
-                |> List.map Tuple.first
-                |> List.map
-                    (\stack ->
-                        Stack.toList stack
-                            |> List.map (Char.toCode >> openToClosing >> Char.fromCode)
-                            |> List.foldl (\c score -> score * 5 + scoreB c) 0
-                    )
-                |> List.sort
-                |> Array.fromList
-    in
-    Array.get (Array.length scores // 2) scores |> Maybe.withDefault -1
+    input
+        |> List.map inspectLine
+        |> List.filter (\x -> Tuple.second x == 0)
+        |> List.map Tuple.first
+        |> List.map
+            (\stack ->
+                Stack.toList stack
+                    |> List.map (Char.toCode >> openToClosing >> Char.fromCode)
+                    |> List.foldl (\c score -> score * 5 + scoreB c) 0
+            )
+        |> List.sort
+        |> Array.fromList
+        |> (\arr ->
+                Array.get (Array.length arr // 2) arr
+                    |> Maybe.withDefault -1
+           )
 
 
 inspectLine : List Char -> ( Stack Char, Int )
@@ -128,7 +128,7 @@ scoreA c =
             25137
 
         _ ->
-            Debug.todo "oops2"
+            -9999
 
 
 scoreB : Char -> Int
@@ -147,7 +147,7 @@ scoreB c =
             4
 
         _ ->
-            Debug.todo "oops5"
+            -9999
 
 
 
