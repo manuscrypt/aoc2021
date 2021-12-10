@@ -53,7 +53,7 @@ solveB input =
                 |> List.map
                     (\stack ->
                         Stack.toList stack
-                            |> List.map closerOf
+                            |> List.map (Char.toCode >> openToClosing >> Char.fromCode)
                             |> List.foldl (\c score -> score * 5 + scoreB c) 0
                     )
                 |> List.sort
@@ -77,7 +77,7 @@ step chars ( stack, prevScore ) =
             if List.member c openers then
                 step rest ( Stack.push c stack, prevScore )
 
-            else if Stack.top stack == Just (openerOf c) then
+            else if Stack.top stack == Just (Char.toCode c |> closingToOpen |> Char.fromCode) then
                 step rest ( Stack.pop stack |> Tuple.second, prevScore )
 
             else
@@ -93,42 +93,23 @@ openers =
     ]
 
 
-openerOf : Char -> Char
-openerOf c =
-    case c of
-        ')' ->
-            '('
+delta : Int -> Int
+delta code =
+    if code < 42 then
+        1
 
-        ']' ->
-            '['
-
-        '}' ->
-            '{'
-
-        '>' ->
-            '<'
-
-        _ ->
-            Debug.todo "oops3"
+    else
+        2
 
 
-closerOf : Char -> Char
-closerOf c =
-    case c of
-        '(' ->
-            ')'
+openToClosing : Int -> Int
+openToClosing code =
+    code + delta code
 
-        '[' ->
-            ']'
 
-        '{' ->
-            '}'
-
-        '<' ->
-            '>'
-
-        _ ->
-            Debug.todo "oops9"
+closingToOpen : Int -> Int
+closingToOpen code =
+    code - delta code
 
 
 scoreA : Char -> Int
