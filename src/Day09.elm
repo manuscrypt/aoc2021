@@ -2,7 +2,6 @@ module Day09 exposing (..)
 
 import List.Extra as List
 import Posix.IO as IO exposing (IO, Process)
-import Set exposing (Set)
 import Utils exposing (..)
 
 

@@ -2,7 +2,6 @@ module Day11 exposing (..)
 
 import List.Extra as List exposing (uniqueBy)
 import Posix.IO as IO exposing (IO, Process)
-import Stack exposing (Stack)
 import Utils exposing (..)
 
 
