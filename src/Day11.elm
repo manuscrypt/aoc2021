@@ -1,6 +1,6 @@
 module Day11 exposing (..)
 
-import List.Extra exposing (uniqueBy)
+import List.Extra as List exposing (uniqueBy)
 import Posix.IO as IO exposing (IO, Process)
 import Stack exposing (Stack)
 import Utils exposing (..)
@@ -69,7 +69,7 @@ iter cells currentStep stepTarget =
                 flashOut increased flashingCells
         in
         if allFlashed then
-            ( currentStep, cells )
+            ( currentStep, newCells )
 
         else
             iter newCells (currentStep + 1) stepTarget
@@ -96,28 +96,25 @@ flashOut cells remaining =
                                 else
                                     c
                             )
-
-                newFlashers =
-                    incSurrounding |> flashers
             in
-            flashOut incSurrounding (newFlashers ++ y |> uniqueBy .pos)
+            flashOut incSurrounding (flashers incSurrounding ++ y |> uniqueBy .pos)
 
         [] ->
-            let
-                flashersThisRound =
-                    cells |> List.filter .hasFlashedThisRound
-            in
-            ( List.length cells == List.length flashersThisRound
-            , cells
-                |> List.map
-                    (\c ->
-                        if c.hasFlashedThisRound then
-                            { c | cur = 0, hasFlashedThisRound = False }
-
-                        else
-                            c
-                    )
+            ( List.length cells == List.count .hasFlashedThisRound cells
+            , resetCells cells
             )
+
+
+resetCells : List Cell -> List Cell
+resetCells =
+    List.map
+        (\c ->
+            if c.hasFlashedThisRound then
+                { c | cur = 0, hasFlashedThisRound = False }
+
+            else
+                c
+        )
 
 
 incBy1 : List Cell -> List Cell
