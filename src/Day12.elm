@@ -1,4 +1,4 @@
-module Day12WithGraph exposing (..)
+module Day12 exposing (..)
 
 import Dict
 import Dict.Extra exposing (groupBy)
@@ -66,8 +66,7 @@ solveA graph =
                 |> List.filterMap (\nid -> Graph.get nid graph)
                 |> groupBy (.node >> .label)
                 |> Dict.filter (\k v -> String.toLower k == k && List.length v > 1)
-                |> Dict.keys
-                |> List.isEmpty
+                |> (==) Dict.empty
         )
         graph
         |> List.length
@@ -86,10 +85,7 @@ solveB graph =
                         |> Dict.values
                         |> List.map List.length
             in
-            List.all (\ll -> ll <= 2) smallCaveCounts
-                && (List.count (\ll -> ll == 2) smallCaveCounts
-                        <= 1
-                   )
+            List.all ((>=) 2) smallCaveCounts && (List.count ((==) 2) smallCaveCounts <= 1)
         )
         graph
         |> List.length
@@ -98,34 +94,29 @@ solveB graph =
 findAllPaths : (List NodeId -> Bool) -> Graph String Int -> List (List NodeId)
 findAllPaths validFn graph =
     findPaths (findNodeId "end" graph) [ [ findNodeId "start" graph ] ] validFn graph
-        |> Tuple.first
 
 
-findPaths : NodeId -> List (List NodeId) -> (List NodeId -> Bool) -> Graph String Int -> ( List (List NodeId), Graph String Int )
+findPaths : NodeId -> List (List NodeId) -> (List NodeId -> Bool) -> Graph String Int -> List (List NodeId)
 findPaths end remaining validFn graph =
     let
         notEnded =
             remaining
-                |> List.filter (\r -> List.last r /= Just end)
+                |> List.filter (\r -> List.head r /= Just end)
 
         ended =
             remaining
-                |> List.filter (\r -> List.last r == Just end)
+                |> List.filter (\r -> List.head r == Just end)
     in
-    if List.isEmpty notEnded then
-        ( ended, graph )
+    let
+        newRem =
+            addOutgoingOfTo notEnded graph
+                |> List.filter validFn
+    in
+    if List.length newRem == List.length notEnded then
+        ended
 
     else
-        let
-            newRem =
-                addOutgoingOfTo notEnded graph
-                    |> List.filter validFn
-        in
-        if List.length newRem == List.length notEnded then
-            ( ended, graph )
-
-        else
-            findPaths end (ended ++ newRem) validFn graph
+        findPaths end (ended ++ newRem) validFn graph
 
 
 addOutgoingOfTo : List (List NodeId) -> Graph String Int -> List (List NodeId)
@@ -137,17 +128,13 @@ addOutgoingOfTo before graph =
                 |> Maybe.withDefault []
     in
     before
-        |> List.map
+        |> List.concatMap
             (\b ->
-                let
-                    outs =
-                        List.last b
-                            |> Maybe.map (\l -> outgoing l)
-                            |> Maybe.withDefault []
-                in
-                outs |> List.map (\o -> b ++ [ o ])
+                List.head b
+                    |> Maybe.map outgoing
+                    |> Maybe.withDefault []
+                    |> List.map (\o -> o :: b)
             )
-        |> List.concat
 
 
 
@@ -227,10 +214,7 @@ findNode str nodes =
 allNodes : List String -> List (Node String)
 allNodes lines =
     lines
-        |> List.concatMap
-            (\l ->
-                l |> String.split "-"
-            )
+        |> List.concatMap (String.split "-")
         |> unique
         |> List.indexedMap Node
 
