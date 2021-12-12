@@ -1,15 +1,12 @@
-module Day12 exposing (..)
+module Day12WithGraph exposing (..)
 
 import Dict
-import Dict.Extra as Dict
-import Graph exposing (Edge)
+import Dict.Extra exposing (groupBy)
+import Graph exposing (Edge, Graph, Node, NodeId)
+import IntDict
 import List.Extra as List exposing (unique)
 import Posix.IO as IO exposing (IO, Process)
 import Utils exposing (..)
-
-
-type alias Edge a e =
-    { from : a, to : a, label : e }
 
 
 program : Process -> IO ()
@@ -30,6 +27,9 @@ program _ =
     IO.do
         (IO.combine
             [ sample
+                |> IO.map (parse >> toMermaid)
+                |> IO.andThen (outputStr "Graph of sample Part A:\n")
+            , sample
                 |> IO.map (parse >> solveA)
                 |> IO.andThen (output "Sample Part A: ")
             , sample2
@@ -38,20 +38,18 @@ program _ =
             , sample3
                 |> IO.map (parse >> solveA)
                 |> IO.andThen (output "Sample3 Part A: ")
-
-            -- , input
-            --     |> IO.map (parse >> solveA)
-            --     |> IO.andThen (output "Part A: ")
+            , input
+                |> IO.map (parse >> solveA)
+                |> IO.andThen (output "Part A: ")
             , sample
                 |> IO.map (parse >> solveB)
                 |> IO.andThen (output "Sample Part B: ")
             , sample2
                 |> IO.map (parse >> solveB)
                 |> IO.andThen (output "Sample2 Part B: ")
-
-            -- , sample3
-            --     |> IO.map (parse >> solveB)
-            --     |> IO.andThen (output "Sample3 Part B: ")
+            , sample3
+                |> IO.map (parse >> solveB)
+                |> IO.andThen (output "Sample3 Part B: ")
             , input
                 |> IO.map (parse >> solveB)
                 |> IO.andThen (output "Part B: ")
@@ -60,206 +58,189 @@ program _ =
         return
 
 
-solveA : List (Edge String Int) -> Int
-solveA edges =
-    findPaths edges [ [ "start" ] ] expandPath validPathA
-        |> List.filter endsInEnd
+solveA : Graph String Int -> Int
+solveA graph =
+    findAllPaths
+        (\path ->
+            path
+                |> List.filterMap (\nid -> Graph.get nid graph)
+                |> groupBy (.node >> .label)
+                |> Dict.filter (\k v -> String.toLower k == k && List.length v > 1)
+                |> Dict.keys
+                |> List.isEmpty
+        )
+        graph
         |> List.length
 
 
-solveB : List (Edge String Int) -> Int
-solveB edges =
-    findPaths edges [ [ "start" ] ] expandPathB validPathB
-        |> List.filter endsInEnd
+solveB : Graph String Int -> Int
+solveB graph =
+    findAllPaths
+        (\path ->
+            let
+                smallCaveCounts =
+                    path
+                        |> List.filterMap (\nid -> Graph.get nid graph)
+                        |> groupBy (.node >> .label)
+                        |> Dict.filter (\k _ -> String.toLower k == k)
+                        |> Dict.values
+                        |> List.map List.length
+            in
+            List.all (\ll -> ll <= 2) smallCaveCounts
+                && (List.count (\ll -> ll == 2) smallCaveCounts
+                        <= 1
+                   )
+        )
+        graph
         |> List.length
 
 
-findPaths : List (Edge String Int) -> List (List String) -> (List String -> List (Edge String Int) -> List (List String)) -> (List String -> Bool) -> List (List String)
-findPaths allEdges allPaths expandFn validFn =
+findAllPaths : (List NodeId -> Bool) -> Graph String Int -> List (List NodeId)
+findAllPaths validFn graph =
+    findPaths (findNodeId "end" graph) [ [ findNodeId "start" graph ] ] validFn graph
+        |> Tuple.first
+
+
+findPaths : NodeId -> List (List NodeId) -> (List NodeId -> Bool) -> Graph String Int -> ( List (List NodeId), Graph String Int )
+findPaths end remaining validFn graph =
     let
         notEnded =
-            allPaths
-                |> List.filter (\p -> List.last p /= Just "end")
+            remaining
+                |> List.filter (\r -> List.last r /= Just end)
 
         ended =
-            allPaths
-                |> List.filter (\p -> List.last p == Just "end")
+            remaining
+                |> List.filter (\r -> List.last r == Just end)
     in
     if List.isEmpty notEnded then
-        allPaths
-        -- |> List.filter validFn
+        ( ended, graph )
 
     else
         let
-            expanded =
-                notEnded
-                    |> List.concatMap (\ne -> expandFn ne allEdges)
+            newRem =
+                addOutgoingOfTo notEnded graph
                     |> List.filter validFn
         in
-        if Debug.log "all+new" (List.length (allPaths ++ expanded |> unique)) == Debug.log "all" (List.length allPaths) then
-            allPaths
-            --|> List.filter validFn
+        if List.length newRem == List.length notEnded then
+            ( ended, graph )
 
         else
-            findPaths allEdges (ended ++ expanded |> unique) expandFn validFn
+            findPaths end (ended ++ newRem) validFn graph
 
 
-endsInEnd : List String -> Bool
-endsInEnd path =
-    List.last path == Just "end"
-
-
-validPathA : List String -> Bool
-validPathA path =
-    path
-        |> Dict.groupBy identity
-        |> Dict.map
-            (\k v ->
-                if String.toLower k == k then
-                    List.length v == 1
-
-                else
-                    True
-            )
-        |> Dict.values
-        |> List.all identity
-
-
-validPathB : List String -> Bool
-validPathB path =
+addOutgoingOfTo : List (List NodeId) -> Graph String Int -> List (List NodeId)
+addOutgoingOfTo before graph =
     let
-        smallCaveCounts =
-            path
-                |> Dict.groupBy identity
-                |> Dict.map
-                    (\k v ->
-                        if String.toLower k == k then
-                            Just ( k, List.length v )
-
-                        else
-                            Nothing
-                    )
-                |> Dict.values
-                |> List.filterMap identity
+        outgoing nodeid =
+            Graph.get nodeid graph
+                |> Maybe.map (\ctx -> IntDict.keys ctx.outgoing)
+                |> Maybe.withDefault []
     in
-    List.all (\x -> Tuple.second x < 3) smallCaveCounts
-        && (List.count (\x -> Tuple.second x == 2) smallCaveCounts <= 1)
+    before
+        |> List.map
+            (\b ->
+                let
+                    outs =
+                        List.last b
+                            |> Maybe.map (\l -> outgoing l)
+                            |> Maybe.withDefault []
+                in
+                outs |> List.map (\o -> b ++ [ o ])
+            )
+        |> List.concat
 
 
-expandPath : List String -> List (Edge String Int) -> List (List String)
-expandPath path edges =
-    case List.last path of
-        Nothing ->
-            []
 
-        Just p ->
-            getOutgoing p path edges
-                |> List.map (\og -> path ++ [ og ])
+-- parsing & utils
 
 
-expandPathB : List String -> List (Edge String Int) -> List (List String)
-expandPathB path edges =
-    case List.last path of
-        Nothing ->
-            []
+findNodeId : String -> Graph String Int -> NodeId
+findNodeId str =
+    Graph.nodes
+        >> List.filter (\n -> n.label == str)
+        >> List.head
+        >> Maybe.map .id
+        >> Maybe.withDefault -1
 
-        Just p ->
-            if p == "end" then
-                [ path ]
+
+prepare : Graph String Int -> Graph String Int
+prepare graph =
+    let
+        start =
+            findNodeId "start" graph
+
+        end =
+            findNodeId "end" graph
+    in
+    Graph.mapContexts
+        (\nc ->
+            if nc.node.id == start || nc.node.id == end then
+                nc
 
             else
-                getOutgoingB p path edges
-                    |> List.map (\og -> path ++ [ og ])
+                { nc
+                    | incoming = IntDict.union nc.outgoing nc.incoming |> IntDict.remove end
+                    , outgoing = IntDict.union nc.incoming nc.outgoing |> IntDict.remove start
+                }
+        )
+        graph
 
 
-getOutgoing : String -> List String -> List (Edge String Int) -> List String
-getOutgoing str pathSoFar edges =
-    edges
-        |> List.filterMap
-            (\e ->
-                if e.from == str && e.from /= "end" then
-                    if e.to /= "start" then
-                        if not (contains pathSoFar ( e.from, e.to )) then
-                            Just e.to
-
-                        else
-                            Nothing
-
-                    else
-                        Nothing
-
-                else if e.to == str && e.to /= "end" then
-                    if e.from /= "start" then
-                        if not (contains pathSoFar ( e.to, e.from )) then
-                            Just e.from
-
-                        else
-                            Nothing
-
-                    else
-                        Nothing
-
-                else
-                    Nothing
-            )
-
-
-getOutgoingB : String -> List String -> List (Edge String Int) -> List String
-getOutgoingB str pathSoFar edges =
-    edges
-        |> List.filterMap
-            (\e ->
-                if e.from == str && e.from /= "end" then
-                    if e.to /= "start" then
-                        if not (containsTwice pathSoFar ( e.from, e.to )) then
-                            Just e.to
-
-                        else
-                            Nothing
-
-                    else
-                        Nothing
-
-                else if e.to == str && e.to /= "end" then
-                    if e.from /= "start" then
-                        if not (containsTwice pathSoFar ( e.to, e.from )) then
-                            Just e.from
-
-                        else
-                            Nothing
-
-                    else
-                        Nothing
-
-                else
-                    Nothing
-            )
-
-
-contains : List String -> ( String, String ) -> Bool
-contains strs ( from, to ) =
-    strs |> String.join "" |> String.contains (from ++ to)
-
-
-containsTwice : List String -> ( String, String ) -> Bool
-containsTwice strs ( from, to ) =
-    (strs |> String.join "" |> String.split (from ++ to) |> List.length) >= 2
-
-
-
----parsing
-
-
-parse : List String -> List (Edge String Int)
+parse : List String -> Graph String Int
 parse input =
-    List.filterMap parseLine input
+    let
+        nodes =
+            allNodes input
+    in
+    Graph.fromNodesAndEdges nodes (parseEdges nodes input)
+        |> prepare
 
 
-parseLine : String -> Maybe (Edge String Int)
-parseLine line =
-    case line |> String.split "-" of
-        [ from, to ] ->
-            Just { from = from, to = to, label = 0 }
+parseEdges : List (Node String) -> List String -> List (Edge Int)
+parseEdges nodes lines =
+    lines
+        |> List.filterMap
+            (\line ->
+                case String.split "-" line of
+                    [ from, to ] ->
+                        Maybe.map2
+                            (\fromNode toNode ->
+                                if to == "start" || from == "end" then
+                                    { from = toNode.id, to = fromNode.id, label = 0 }
 
-        _ ->
-            Nothing
+                                else
+                                    { from = fromNode.id, to = toNode.id, label = 0 }
+                            )
+                            (findNode from nodes)
+                            (findNode to nodes)
+
+                    _ ->
+                        Nothing
+            )
+
+
+findNode : String -> List (Node String) -> Maybe (Node String)
+findNode str nodes =
+    nodes |> List.filter (\n -> n.label == str) |> List.head
+
+
+allNodes : List String -> List (Node String)
+allNodes lines =
+    lines
+        |> List.concatMap
+            (\l ->
+                l |> String.split "-"
+            )
+        |> unique
+        |> List.indexedMap Node
+
+
+toMermaid : Graph String Int -> String
+toMermaid graph =
+    "```mermaid\n"
+        ++ "flowchart LR\n"
+        ++ (Graph.nodes graph |> List.map (\n -> String.fromInt n.id ++ "[" ++ String.fromInt n.id ++ ":" ++ n.label ++ "]") |> String.join "\n")
+        ++ "\n"
+        ++ (Graph.edges graph |> List.map (\e -> String.fromInt e.from ++ " --> " ++ String.fromInt e.to) |> String.join "\n")
+        ++ "\n"
+        ++ "```"
