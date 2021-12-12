@@ -2,8 +2,8 @@ module Day12 exposing (..)
 
 import Dict
 import Dict.Extra as Dict
-import Graph exposing (Edge, Graph)
-import List.Extra as List exposing (unique, uniqueBy)
+import Graph exposing (Edge)
+import List.Extra as List exposing (unique)
 import Posix.IO as IO exposing (IO, Process)
 import Utils exposing (..)
 
