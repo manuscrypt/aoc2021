@@ -19,37 +19,107 @@ program _ =
 
         sample =
             getInput "d16" "sample"
-
-        xx =
-            solveA [ "8A004A801A8002F478" ]
     in
-    -- IO.do
-    --     (IO.combine
-    --         [ sample
-    --             |> IO.map (parse >> solveA)
-    --             |> IO.andThen (output "Sample Part A: ")
-    --         , sample
-    --             |> IO.map (parse >> solveB)
-    --             |> IO.andThen (output "Sample Part B: ")
-    --         , input
-    --             |> IO.map (parse >> solveA)
-    --             |> IO.andThen (output "Part A: ")
-    --         , input
-    --             |> IO.map (parse >> solveB)
-    --             |> IO.andThen (output "Part B: ")
-    --         ]
-    --     )
-    IO.return ()
+    IO.do
+        (IO.combine
+            [ sample
+                |> IO.map (parse >> solveA)
+                |> IO.andThen (output "Sample Part A: ")
+            , sample
+                |> IO.map (parse >> solveB)
+                |> IO.andThen (output "Sample Part B: ")
+            , input
+                |> IO.map (parse >> solveA)
+                |> IO.andThen (output "Part A: ")
+            , input
+                |> IO.map (parse >> solveB)
+                |> IO.andThen (output "Part B: ")
+            ]
+        )
+        return
 
 
 solveA : List String -> Int
 solveA strs =
-    strs |> List.map (\s -> toBits s |> Debug.log "bits" |> parsePacket |> Debug.log "packets" |> Tuple.first |> sumVersions |> Debug.log s) |> List.sum
+    strs
+        |> List.map
+            (\s ->
+                toBits s
+                    |> parsePacket
+                    |> Tuple.first
+                    |> sumVersions
+            )
+        |> List.sum
 
 
-solveB : a -> Int
-solveB _ =
-    0
+solveB : List String -> Int
+solveB strs =
+    strs
+        |> String.join ""
+        |> toBits
+        |> parsePacket
+        |> Tuple.first
+        |> calc
+
+
+calc : Packet -> Int
+calc p =
+    case p of
+        Literal _ _ { nr } ->
+            nr
+
+        Operator _ id _ subPacks ->
+            case id of
+                0 ->
+                    subPacks |> List.map calc |> List.sum
+
+                1 ->
+                    subPacks |> List.map calc |> List.product
+
+                2 ->
+                    subPacks |> List.map calc |> List.minimum |> Maybe.withDefault 0
+
+                3 ->
+                    subPacks |> List.map calc |> List.maximum |> Maybe.withDefault 0
+
+                5 ->
+                    case subPacks of
+                        [ first, second ] ->
+                            if calc first > calc second then
+                                1
+
+                            else
+                                0
+
+                        _ ->
+                            Debug.todo "5"
+
+                6 ->
+                    case subPacks of
+                        [ first, second ] ->
+                            if calc first < calc second then
+                                1
+
+                            else
+                                0
+
+                        _ ->
+                            Debug.todo "6"
+
+                7 ->
+                    case subPacks of
+                        [ first, second ] ->
+                            if calc first == calc second then
+                                1
+
+                            else
+                                0
+
+                        _ ->
+                            Debug.todo "7"
+
+                _ ->
+                    Debug.todo "cannot calc"
 
 
 sumVersions : Packet -> Int
@@ -66,13 +136,10 @@ parsePacket : List Bool -> ( Packet, List Bool )
 parsePacket bools =
     let
         ( version, r1 ) =
-            parseVersion bools
+            parseInt 3 bools
 
         ( id, rest ) =
-            parseId r1
-
-        xx =
-            rest |> Binary.fromBooleans |> Binary.toIntegers |> Debug.log "rest"
+            parseInt 3 r1
     in
     case id of
         4 ->
@@ -80,33 +147,6 @@ parsePacket bools =
 
         _ ->
             parseOperatorPacket rest version id
-
-
-parseOperatorPacket : List Bool -> Int -> Int -> ( Packet, List Bool )
-parseOperatorPacket rest version id =
-    let
-        ( ltid, r3 ) =
-            parseOperatorLengthTypeId rest
-
-        ( amt, r4 ) =
-            case ltid of
-                0 ->
-                    ( List.take 15 r3 |> Binary.fromBooleans |> Binary.toDecimal, List.drop 15 r3 )
-
-                1 ->
-                    ( List.take 11 r3 |> Binary.fromBooleans |> Binary.toDecimal, List.drop 11 r3 )
-
-                _ ->
-                    Debug.todo "boom"
-
-        ( subPacks, r5 ) =
-            if ltid == 0 then
-                parseSubPackets0 amt r4 []
-
-            else
-                parseSubPackets1 amt r4 []
-    in
-    ( Operator version id { lengthTypeId = ltid, subLen = amt } (List.reverse subPacks), r5 )
 
 
 parseLiteralPacket : List Bool -> Int -> Int -> ( Packet, List Bool )
@@ -118,23 +158,55 @@ parseLiteralPacket rest version id =
     ( Literal version id { nr = nr }, r2 )
 
 
-parseSubPackets0 : Int -> List Bool -> List Packet -> ( List Packet, List Bool )
-parseSubPackets0 remaining bools packets =
-    if remaining <= 0 then
+parseOperatorPacket : List Bool -> Int -> Int -> ( Packet, List Bool )
+parseOperatorPacket rest version id =
+    let
+        ( ltid, r3 ) =
+            parseInt 1 rest
+
+        ( amt, r4 ) =
+            case ltid of
+                0 ->
+                    parseInt 15 r3
+
+                1 ->
+                    parseInt 11 r3
+
+                _ ->
+                    Debug.todo "boom"
+    in
+    if ltid == 0 then
+        let
+            ( sp, _ ) =
+                parseSubPackets0 (List.take amt r4) []
+        in
+        ( Operator version id { lengthTypeId = ltid, subLen = amt } (List.reverse sp), List.drop amt r4 )
+
+    else
+        let
+            ( sp, r5 ) =
+                parseSubPackets1 amt r4 []
+        in
+        ( Operator version id { lengthTypeId = ltid, subLen = amt } (List.reverse sp), r5 )
+
+
+parseSubPackets0 : List Bool -> List Packet -> ( List Packet, List Bool )
+parseSubPackets0 bools packets =
+    if List.isEmpty bools then
         ( packets, bools )
 
     else
         let
             ( p, rest ) =
-                parsePacket (List.take remaining bools)
+                parsePacket bools
         in
-        parseSubPackets0 (List.length rest) rest (p :: packets)
+        parseSubPackets0 rest (p :: packets)
 
 
 parseSubPackets1 : Int -> List Bool -> List Packet -> ( List Packet, List Bool )
 parseSubPackets1 remaining bools packets =
     if remaining == 0 then
-        ( packets, [] )
+        ( packets, bools )
 
     else
         let
@@ -142,15 +214,6 @@ parseSubPackets1 remaining bools packets =
                 parsePacket bools
         in
         parseSubPackets1 (remaining - 1) rest (p :: packets)
-
-
-parseOperatorLengthTypeId : List Bool -> ( Int, List Bool )
-parseOperatorLengthTypeId bools =
-    if List.length bools < 1 then
-        Debug.todo "cannot parse oplenid"
-
-    else
-        ( List.take 1 bools |> Binary.fromBooleans |> Binary.toDecimal, List.drop 1 bools )
 
 
 parserLiteralChunks : List Bool -> Bits -> ( Int, List Bool )
@@ -184,26 +247,9 @@ parserLiteralChunks bools bits =
                 Debug.todo "dontknow"
 
 
-
---( bits |> Binary.toDecimal, List.drop 5 bools )
-
-
-parseId : List Bool -> ( Int, List Bool )
-parseId bools =
-    if List.length bools < 3 then
-        Debug.todo "cannot parse id"
-
-    else
-        ( bools |> List.take 3 |> Binary.fromBooleans |> Binary.toDecimal, bools |> List.drop 3 )
-
-
-parseVersion : List Bool -> ( Int, List Bool )
-parseVersion bools =
-    if List.length bools < 3 then
-        Debug.todo "cannot parse version"
-
-    else
-        ( bools |> List.take 3 |> Binary.fromBooleans |> Binary.toDecimal, bools |> List.drop 3 )
+parseInt : Int -> List Bool -> ( Int, List Bool )
+parseInt amt bools =
+    ( bools |> List.take amt |> Binary.fromBooleans |> Binary.toDecimal, bools |> List.drop amt )
 
 
 toBits : String -> List Bool
