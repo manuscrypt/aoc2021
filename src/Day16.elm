@@ -224,37 +224,36 @@ parserLiteralChunks bools bits =
 
         rest =
             bools |> List.drop 5
+
+        rem =
+            Binary.append bits (List.drop 1 chunk |> Binary.fromBooleans)
     in
-    if List.length chunk /= 5 then
-        ( Binary.toDecimal bits, bools )
+    case List.head chunk of
+        Just False ->
+            ( rem |> Binary.toDecimal, rest )
 
-    else
-        let
-            nr =
-                List.drop 1 chunk |> Binary.fromBooleans
+        Just True ->
+            parserLiteralChunks rest rem
 
-            rem =
-                Binary.append bits nr
-        in
-        case List.head chunk of
-            Just False ->
-                ( rem |> Binary.toDecimal, rest )
-
-            Just True ->
-                parserLiteralChunks rest rem
-
-            _ ->
-                Debug.todo "dontknow"
+        _ ->
+            Debug.todo "dontknow"
 
 
 parseInt : Int -> List Bool -> ( Int, List Bool )
 parseInt amt bools =
-    ( bools |> List.take amt |> Binary.fromBooleans |> Binary.toDecimal, bools |> List.drop amt )
+    ( bools
+        |> List.take amt
+        |> Binary.fromBooleans
+        |> Binary.toDecimal
+    , bools
+        |> List.drop amt
+    )
 
 
 toBits : String -> List Bool
 toBits str =
-    Binary.fromHex str |> Binary.toBooleans
+    Binary.fromHex str
+        |> Binary.toBooleans
 
 
 parse : List String -> List String
