@@ -35,13 +35,6 @@ targetInput =
 
 program : Process -> IO ()
 program _ =
-    let
-        input =
-            getInput "d16" "input"
-
-        sample =
-            getInput "d16" "sample"
-    in
     IO.do
         (IO.combine
             [ output "Sample Part A: " (solveA targetSample)
