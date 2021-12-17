@@ -17,6 +17,7 @@
             "elm-community/graph": "6.0.0",
             "elm-community/intdict": "3.0.0",
             "elm-community/list-extra": "8.5.1",
+            "elm-explorations/linear-algebra": "1.0.3",
             "elmw/extra-bit": "1.0.14",
             "icidasset/elm-binary": "2.1.0",
             "krisajenkins/remotedata": "6.0.1",
